@@ -1,0 +1,174 @@
+Here are the relationships of the tables in this assignment:
+- An actor has many characters and has many shows through characters.
+- A character belongs to an actor and belongs to a show.
+- A show has many characters and has many actors through characters.
+- NOTE: In this scenario, the 'characters' table will be the the 'Join Table'
+
+Workflow for this lab [75%]
+- Finish the migrations:
+- [X] 'db/migrate/004_create_actors.rb'
+- [X] 'db/migrate/005_create_characters.rb'
+- [X] /db/migrate/006_add_catchphrase_to_characters.rb'
+- Run 'learn test'
+- [ ] Build methods for related classes in 'app/models/' directory using 'has_many' and 'belongs_to' Active Record macros
+
+Contents of 'db/migrate/004_create_actors.rb':
+#+begin_src ruby
+class CreateActors < ActiveRecord::Migration[6.1]
+  def change
+    create_table :actors do |t|
+      t.string :first_name
+      t.string :last_name
+    end
+  end
+end
+#+end_src
+
+Contents of 'db/migrate/005_create_characters.rb':
+#+begin_src ruby
+class CreateCharacters < ActiveRecord::Migration[6.1]
+  def change
+    create_table :characters do |t|
+      t.string :name
+      t.integer :actor_id
+      t.integer :show_id
+    end
+  end
+end
+#+end_src
+
+Contents of 'db/migrate/006_add_catchphrase_to_characters.rb':
+#+begin_src ruby
+class AddCatchphraseToCharacters < ActiveRecord::Migration[6.1]
+  def change
+    change_table :characters do |t|
+      t.string :catchphrase
+    end
+  end
+end
+#+end_src
+
+I then ran the 'bundle exec rake db:migrate' command:
+#+begin_src bash
+samuelbanya@Samuels-MBP ~/hub/Development/code/phase-3/phase-3-active-record-associations-tvland-lab $ bundle exec rake db:migrate
+== 4 CreateActors: migrating ==================================================
+-- create_table(:actors)
+   -> 0.0012s
+== 4 CreateActors: migrated (0.0012s) =========================================
+
+== 5 CreateCharacters: migrating ==============================================
+-- create_table(:characters)
+   -> 0.0011s
+== 5 CreateCharacters: migrated (0.0012s) =====================================
+
+== 6 AddCatchphraseToCharacters: migrating ====================================
+-- change_table(:characters)
+   -> 0.0007s
+== 6 AddCatchphraseToCharacters: migrated (0.0008s) ===========================
+#+end_src
+
+Contents of 'app/models/actor.rb':
+#+begin_src ruby
+class Actor < ActiveRecord::Base
+  # #characters: an actor has many characters, so write code that creates an instance method
+  # that will return all the characters that the actor has played.
+  # Hint: is there an association macro you can use to create this method?
+  has_many :characters
+  # #shows: an actor should have many characters and many shows through characters.
+  # Write code that creates an instance method that returns all the shows for the actor.
+  # Hint: is there an association macro you can use to create this method?
+  has_many :shows, through: :characters
+
+  # #full_name: Write a method in the Actor class, #full_name, that returns the first and last name of an actor.
+  def full_name()
+    # First Attempt:
+    # full_name = self.first_name + " " + self.last_name
+    # full_name
+    # More elegant solution:
+    "#{self.first_name} #{self.last_name}"
+  end
+
+  # #list_roles: Write a method in the Actor class, #list_roles, that lists all of the characters
+  # that actor has alongside the show that the character is in.
+  def list_roles()
+    # First attempt:
+    # self.characters.all().each do |character|
+    # "#{character.name} - #{character.show}"
+    # end
+    self.characters.map() do |character|
+      "#{character.name} - #{character.show.name}"
+    end
+  end
+end
+#+end_src
+
+Contents of 'app/models/character.rb':
+#+begin_src ruby
+class Character < ActiveRecord::Base
+  # #actor: should return the actor instance this character belongs to.
+  # Hint: is there an association macro you can use to create this method?
+  # NOTE: By using 'belongs_to :actor', this will create a '#actor' method
+  # that associates the 'characters' table to the 'actors' table
+  # NOTE: Not to be confusing but we are associating the 'Character' class
+  # to the 'Actor' class hence the singular usage here of the ':actor' symbol:
+  belongs_to :actor
+  #show: should return the show instance this character belongs to.
+  # Hint: is there an association macro you can use to create this method?
+  belongs_to :show
+  #say_that_thing_you_say:
+  # Define a method in the Character class, #say_that_thing_you_say, using a given character's catchphrase.
+  # Using Tyrion as an example again, the returned string should look like the following
+  # tyrion.catchphrase = 'A Lannister always pays his debts'
+  # tyrion.say_that_thing_you_say
+  # => 'Tyrion Lannister always says: A Lannister always pays his debts'
+  def say_that_thing_you_say()
+    # First Attempt:
+    # puts catchphrase
+    # NOTE: Would have never figured this out, terrible hint -->
+    "#{self.name} always says: #{self.catchphrase}"
+  end
+end
+#+end_src
+
+Contents of 'app/models/network.rb':
+#+begin_src ruby
+class Network < ActiveRecord::Base
+  # #shows: should return a list of all the show instances associated with the network.
+  has_many :shows
+  # #sorry: returns a string "We're sorry about passing on John Mulaney's pilot".
+  def sorry()
+    "We're sorry about passing on John Mulaney's pilot"
+  end
+end
+#+end_src
+
+Contents of 'app/models/show.rb':
+#+begin_src ruby
+class Show < ActiveRecord::Base
+  # #characters: should return a list of all the character instances associated with the show.
+  has_many :characters
+  # NOTE: This was included for the '#actors_list' method's relationship to the 'Show' class below:
+  # First Attempt:
+  # has_many :actors, through: :show
+  has_many :actors, through: :characters
+
+  # #network: should return the network instance this show belongs to
+  belongs_to :network
+
+  # #actors_list: Define a method in the Show class called #actors_list that returns an Array
+  # of the full names of each actor associated with a show.
+  # Remember, a show should have many actors through characters.
+  # Hint: it may help to use another association macro to access the actors for the show
+  def actors_list()
+    # First Attempt:
+    # self.actors.show.all()
+    # Second Attempt:
+    # self.actors.map do |actor|
+    # actor.show.name
+    # end
+    self.actors.map do |actor|
+      actor.full_name()
+    end
+  end
+end
+#+end_src
